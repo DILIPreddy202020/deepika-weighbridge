@@ -91,6 +91,18 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
 .channel-status { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: #e0e0e0; flex-shrink: 0; }
 .channel-status.ok  { background: #25d366; }
 .channel-status.err { background: #e53935; }
+
+/* Sent banner — shown after successful submit */
+.sent-banner {
+  display: none; background: #e8f5e9; border: 1px solid #c6f0d8;
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+  text-align: center;
+}
+.sent-banner.show { display: block; }
+.sent-banner .sb-icon { font-size: 28px; margin-bottom: 4px; }
+.sent-banner .sb-title { font-size: 14px; font-weight: 600; color: #0a7a42; }
+.sent-banner .sb-sub   { font-size: 12px; color: #3d8b5e; margin-top: 3px; }
+
 .submit-wrap {
   position: fixed; bottom: 0; left: 0; right: 0;
   padding: 12px 16px 24px; background: #f5f6fa;
@@ -105,17 +117,18 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
   display: flex; align-items: center; justify-content: center; gap: 10px;
   transition: transform 0.15s, opacity 0.15s;
 }
-.btn-submit.inbound { background: #e67e22; }
-.btn-submit:active { transform: scale(0.97); opacity: 0.9; }
-.btn-submit:disabled { opacity: 0.6; pointer-events: none; }
-.btn-submit.sending { background: #1a8abf !important; }
-.btn-submit.sent    { background: #0a7a42 !important; }
-.btn-submit.error   { background: #e53935 !important; }
+.btn-submit.inbound  { background: #e67e22; }
+.btn-submit:active   { transform: scale(0.97); opacity: 0.9; }
+.btn-submit:disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+.btn-submit.sending  { background: #1a8abf !important; }
+.btn-submit.done     { background: #0a7a42 !important; }
+.btn-submit.error    { background: #e53935 !important; }
 .btn-clear {
   width: 100%; padding: 9px; background: transparent; border: none;
   font-size: 13px; color: #8892a4; cursor: pointer; margin-top: 6px;
   font-family: 'DM Sans', sans-serif;
 }
+.btn-clear.highlight { color: #2ca5e0; font-weight: 600; }
 .toast {
   position: fixed; top: 50%; left: 50%;
   transform: translate(-50%,-50%) scale(0.9);
@@ -134,7 +147,7 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
 <div class="header">
   <div class="logo-box">DC</div>
   <div class="header-text">
-    <div class="title">Deepika Construction <span class="slip-badge" id="header-slip">WB-0001</span></div>
+    <div class="title">Deepika Construction <span class="slip-badge" id="header-slip">—</span></div>
     <div class="sub">Plant Management System</div>
   </div>
 </div>
@@ -161,6 +174,13 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
         <div class="channel-status" id="wb-st-sh"></div>
       </div>
     </div>
+
+    <div class="sent-banner" id="wb-sent-banner">
+      <div class="sb-icon">✅</div>
+      <div class="sb-title" id="wb-sent-title">Slip sent successfully!</div>
+      <div class="sb-sub">Tap "Clear &amp; new slip" below to start the next entry</div>
+    </div>
+
     <div class="card">
       <div class="card-head">Date &amp; Time</div>
       <div class="field-row">
@@ -221,7 +241,7 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
       <button class="btn-submit" id="wb-btn" onclick="wbSubmit()">
         <span id="wb-icon">✈️</span><span id="wb-text">Send — Telegram + Sheets</span>
       </button>
-      <button class="btn-clear" onclick="wbClear()">✕ Clear &amp; new slip</button>
+      <button class="btn-clear" id="wb-clear-btn" onclick="wbClear()">✕ Clear &amp; new slip</button>
     </div>
   </div>
 </div>
@@ -241,6 +261,13 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
         <div class="channel-status" id="in-st-sh"></div>
       </div>
     </div>
+
+    <div class="sent-banner" id="in-sent-banner">
+      <div class="sb-icon">✅</div>
+      <div class="sb-title" id="in-sent-title">Purchase order sent!</div>
+      <div class="sb-sub">Tap "Clear &amp; new entry" below to start the next entry</div>
+    </div>
+
     <div class="card">
       <div class="card-head">Date &amp; Time</div>
       <div class="field-row">
@@ -305,7 +332,7 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
       <button class="btn-submit inbound" id="in-btn" onclick="inSubmit()">
         <span id="in-icon">📦</span><span id="in-text">Send — Telegram + Sheets</span>
       </button>
-      <button class="btn-clear" onclick="inClear()">✕ Clear &amp; new entry</button>
+      <button class="btn-clear" id="in-clear-btn" onclick="inClear()">✕ Clear &amp; new entry</button>
     </div>
   </div>
 </div>
@@ -316,19 +343,33 @@ var TG_CHAT    = '1462372902';
 var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyB3xht6LdYL1bzIWejWmLxi57rLf0eSAmDbbekiShWMA5-ma6y51DSg6Exkk0ExOtb/exec';
 var PLANT      = 'Deepika Construction';
 
-function getSlip() {
+// ── SLIP / PO — read current, don't increment on load ──
+function peekSlip() {
+  var n = parseInt(localStorage.getItem('dc_slip') || '0');
+  if (n === 0) { n = 1; localStorage.setItem('dc_slip', 1); }
+  return 'WB-' + String(n).padStart(4, '0');
+}
+function peekPO() {
+  var n = parseInt(localStorage.getItem('dc_po') || '0');
+  if (n === 0) { n = 1; localStorage.setItem('dc_po', 1); }
+  return 'PO-' + String(n).padStart(4, '0');
+}
+function nextSlip() {
   var n = parseInt(localStorage.getItem('dc_slip') || '0') + 1;
   localStorage.setItem('dc_slip', n);
   return 'WB-' + String(n).padStart(4, '0');
 }
-function getPO() {
+function nextPO() {
   var n = parseInt(localStorage.getItem('dc_po') || '0') + 1;
   localStorage.setItem('dc_po', n);
   return 'PO-' + String(n).padStart(4, '0');
 }
 
-var currentSlip = getSlip();
-var currentPO   = getPO();
+var currentSlip = peekSlip();
+var currentPO   = peekPO();
+var wbSent      = false;
+var inSent      = false;
+
 document.getElementById('header-slip').textContent = currentSlip;
 document.getElementById('in-po').value = currentPO;
 
@@ -359,10 +400,30 @@ function showToast(msg, type) {
   setTimeout(function(){ el.className = 'toast'; }, 3000);
 }
 
-function sendBoth(msg, sheetName, row, tgId, shId, btnId, iconId, textId, resetBg, resetIcon, resetText) {
-  var btn  = document.getElementById(btnId);
-  var icon = document.getElementById(iconId);
-  var txt  = document.getElementById(textId);
+function lockForm(prefix, slipLabel) {
+  // Disable all inputs in this form
+  var page = document.getElementById('page-' + prefix);
+  page.querySelectorAll('input:not([readonly]), select').forEach(function(el){
+    el.disabled = true;
+  });
+  // Show sent banner
+  document.getElementById(prefix + '-sent-banner').classList.add('show');
+  document.getElementById(prefix === 'wb' ? 'wb-sent-title' : 'in-sent-title').textContent =
+    slipLabel + ' sent successfully!';
+  // Lock submit button permanently
+  var btn = document.getElementById(prefix + '-btn');
+  btn.disabled = true;
+  btn.classList.add('done');
+  document.getElementById(prefix + '-icon').textContent = '✅';
+  document.getElementById(prefix + '-text').textContent = 'Already sent — clear to start new';
+  // Highlight clear button
+  document.getElementById(prefix + '-clear-btn').classList.add('highlight');
+}
+
+function sendBoth(msg, sheetName, row, tgId, shId, prefix, slipLabel) {
+  var btn  = document.getElementById(prefix + '-btn');
+  var icon = document.getElementById(prefix + '-icon');
+  var txt  = document.getElementById(prefix + '-text');
   btn.disabled = true; btn.classList.add('sending');
   icon.textContent = '⏳'; txt.textContent = 'Sending…';
   var done = 0; var ok = 0;
@@ -372,19 +433,20 @@ function sendBoth(msg, sheetName, row, tgId, shId, btnId, iconId, textId, resetB
     if (done < 2) return;
     btn.classList.remove('sending');
     if (ok === 2) {
-      btn.classList.add('sent');
-      icon.textContent = '✅'; txt.textContent = 'Sent — Telegram + Sheets!';
-      showToast('✅ Both channels done!', 'success');
+      lockForm(prefix, slipLabel);
+      showToast('✅ ' + slipLabel + ' sent — Telegram + Sheets!', 'success');
     } else {
+      // partial failure — allow retry
+      btn.disabled = false;
       btn.classList.add('error');
-      icon.textContent = '⚠️'; txt.textContent = 'Check status dots';
-      showToast('⚠ One channel failed', 'error');
+      icon.textContent = '⚠️'; txt.textContent = 'Failed — tap to retry';
+      showToast('⚠ One channel failed — tap retry', 'error');
+      setTimeout(function(){
+        btn.classList.remove('error');
+        icon.textContent = prefix === 'wb' ? '✈️' : '📦';
+        txt.textContent = 'Send — Telegram + Sheets';
+      }, 4000);
     }
-    btn.disabled = false;
-    setTimeout(function(){
-      btn.classList.remove('sent','error');
-      icon.textContent = resetIcon; txt.textContent = resetText;
-    }, 4000);
   }
 
   fetch('https://api.telegram.org/bot' + TG_TOKEN + '/sendMessage', {
@@ -404,11 +466,11 @@ function sendBoth(msg, sheetName, row, tgId, shId, btnId, iconId, textId, resetB
 
 /* ── WEIGH BRIDGE ── */
 function wbCalc() {
-  var g = parseFloat(document.getElementById('wb-gross').value)||0;
-  var t = parseFloat(document.getElementById('wb-tare').value)||0;
-  var net = g - t; var vol = net > 0 ? net/2400 : 0;
-  document.getElementById('wb-net').value = net>0 ? Number(net).toLocaleString('en-IN')+' kg' : '';
-  document.getElementById('wb-vol').value = vol>0 ? vol.toFixed(2)+' m³' : '';
+  var g=parseFloat(document.getElementById('wb-gross').value)||0;
+  var t=parseFloat(document.getElementById('wb-tare').value)||0;
+  var net=g-t; var vol=net>0?net/2400:0;
+  document.getElementById('wb-net').value=net>0?Number(net).toLocaleString('en-IN')+' kg':'';
+  document.getElementById('wb-vol').value=vol>0?vol.toFixed(2)+' m³':'';
   wbPreview();
 }
 function wbPreview() {
@@ -432,10 +494,11 @@ function wbPreview() {
     '━━━━━━━━━━━━━━━━━━━','📝 Remarks  : '+r,
     '━━━━━━━━━━━━━━━━━━━','_Deepika Construction — Weigh Bridge_'
   ].join('\n');
-  document.getElementById('wb-preview').textContent = msg;
+  document.getElementById('wb-preview').textContent=msg;
   return msg;
 }
 function wbSubmit() {
+  if(wbSent){showToast('⚠ Already sent! Tap Clear & new slip','');return;}
   var v=document.getElementById('wb-vehicle').value.trim();
   var c=document.getElementById('wb-customer').value.trim();
   var g=document.getElementById('wb-gross').value.trim();
@@ -445,17 +508,27 @@ function wbSubmit() {
   if(!g){showToast('⚠ Enter gross weight','');return;}
   if(!t){showToast('⚠ Enter tare weight','');return;}
   if(parseFloat(g)<=parseFloat(t)){showToast('⚠ Gross must be more than tare','');return;}
+  wbSent=true;
   var net=parseFloat(g)-parseFloat(t);
   var vol=parseFloat((net/2400).toFixed(2));
   sendBoth(wbPreview(),'Weigh Bridge',
     [currentSlip,document.getElementById('wb-dt').value,v,c,document.getElementById('wb-mix').value,parseFloat(g),parseFloat(t),net,vol,document.getElementById('wb-remarks').value||''],
-    'wb-st-tg','wb-st-sh','wb-btn','wb-icon','wb-text','#2ca5e0','✈️','Send — Telegram + Sheets');
+    'wb-st-tg','wb-st-sh','wb',currentSlip);
 }
 function wbClear() {
+  wbSent=false;
+  var page=document.getElementById('page-wb');
+  page.querySelectorAll('input:not([readonly]), select').forEach(function(el){el.disabled=false;});
   ['wb-vehicle','wb-customer','wb-gross','wb-tare','wb-net','wb-vol','wb-remarks'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('wb-mix').value='M25';
   setDot('wb-st-tg',''); setDot('wb-st-sh','');
-  currentSlip=getSlip();
+  document.getElementById('wb-sent-banner').classList.remove('show');
+  document.getElementById('wb-clear-btn').classList.remove('highlight');
+  var btn=document.getElementById('wb-btn');
+  btn.disabled=false; btn.classList.remove('done','sent','error');
+  document.getElementById('wb-icon').textContent='✈️';
+  document.getElementById('wb-text').textContent='Send — Telegram + Sheets';
+  currentSlip=nextSlip();
   document.getElementById('header-slip').textContent=currentSlip;
   setDT(); wbPreview();
 }
@@ -492,6 +565,7 @@ function inPreview() {
   return msg;
 }
 function inSubmit() {
+  if(inSent){showToast('⚠ Already sent! Tap Clear & new entry','');return;}
   var s=document.getElementById('in-supplier').value.trim();
   var v=document.getElementById('in-vehicle').value.trim();
   var m=document.getElementById('in-material').value;
@@ -503,15 +577,25 @@ function inSubmit() {
   if(!g){showToast('⚠ Enter gross weight','');return;}
   if(!t){showToast('⚠ Enter tare weight','');return;}
   if(parseFloat(g)<=parseFloat(t)){showToast('⚠ Gross must be more than tare','');return;}
+  inSent=true;
   var net=parseFloat(g)-parseFloat(t);
   sendBoth(inPreview(),'Inbound',
     [currentPO,document.getElementById('in-dt').value,s,v,m,parseFloat(g),parseFloat(t),net,document.getElementById('in-remarks').value||''],
-    'in-st-tg','in-st-sh','in-btn','in-icon','in-text','#e67e22','📦','Send — Telegram + Sheets');
+    'in-st-tg','in-st-sh','in',currentPO);
 }
 function inClear() {
+  inSent=false;
+  var page=document.getElementById('page-inbound');
+  page.querySelectorAll('input:not([readonly]), select').forEach(function(el){el.disabled=false;});
   ['in-supplier','in-vehicle','in-material','in-gross','in-tare','in-net','in-remarks'].forEach(function(id){document.getElementById(id).value='';});
   setDot('in-st-tg',''); setDot('in-st-sh','');
-  currentPO=getPO();
+  document.getElementById('in-sent-banner').classList.remove('show');
+  document.getElementById('in-clear-btn').classList.remove('highlight');
+  var btn=document.getElementById('in-btn');
+  btn.disabled=false; btn.classList.remove('done','sent','error');
+  document.getElementById('in-icon').textContent='📦';
+  document.getElementById('in-text').textContent='Send — Telegram + Sheets';
+  currentPO=nextPO();
   document.getElementById('in-po').value=currentPO;
   document.getElementById('header-slip').textContent=currentPO;
   setDT(); inPreview();
