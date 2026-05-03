@@ -148,13 +148,13 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
   <div class="logo-box">DC</div>
   <div class="header-text">
     <div class="title">Deepika Construction <span class="slip-badge" id="header-slip">—</span></div>
-    <div class="sub">Plant Management System</div>
+    <div class="sub">Sales & Purchases</div>
   </div>
 </div>
 
 <div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('wb', this)">⚖️ Weigh Bridge</button>
-  <button class="tab-btn" onclick="switchTab('inbound', this)">📦 Inbound Purchase</button>
+  <button class="tab-btn active" onclick="switchTab('wb', this)">🧾 Sales</button>
+  <button class="tab-btn" onclick="switchTab('inbound', this)">🛒 Purchases</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -177,8 +177,8 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
 
     <div class="sent-banner" id="wb-sent-banner">
       <div class="sb-icon">✅</div>
-      <div class="sb-title" id="wb-sent-title">Slip sent successfully!</div>
-      <div class="sb-sub">Tap "Clear &amp; new slip" below to start the next entry</div>
+      <div class="sb-title" id="wb-sent-title">Sale sent successfully!</div>
+      <div class="sb-sub">Tap "Clear &amp; new sale" below to start the next sale</div>
     </div>
 
     <div class="card">
@@ -241,7 +241,7 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
       <button class="btn-submit" id="wb-btn" onclick="wbSubmit()">
         <span id="wb-icon">✈️</span><span id="wb-text">Send — Telegram + Sheets</span>
       </button>
-      <button class="btn-clear" id="wb-clear-btn" onclick="wbClear()">✕ Clear &amp; new slip</button>
+      <button class="btn-clear" id="wb-clear-btn" onclick="wbClear()">✕ Clear &amp; new sale</button>
     </div>
   </div>
 </div>
@@ -264,8 +264,8 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
 
     <div class="sent-banner" id="in-sent-banner">
       <div class="sb-icon">✅</div>
-      <div class="sb-title" id="in-sent-title">Purchase order sent!</div>
-      <div class="sb-sub">Tap "Clear &amp; new entry" below to start the next entry</div>
+      <div class="sb-title" id="in-sent-title">Purchase sent!</div>
+      <div class="sb-sub">Tap "Clear &amp; new purchase" below to start the next sale</div>
     </div>
 
     <div class="card">
@@ -332,7 +332,7 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: #f5f6f
       <button class="btn-submit inbound" id="in-btn" onclick="inSubmit()">
         <span id="in-icon">📦</span><span id="in-text">Send — Telegram + Sheets</span>
       </button>
-      <button class="btn-clear" id="in-clear-btn" onclick="inClear()">✕ Clear &amp; new entry</button>
+      <button class="btn-clear" id="in-clear-btn" onclick="inClear()">✕ Clear &amp; new purchase</button>
     </div>
   </div>
 </div>
@@ -483,7 +483,7 @@ function wbPreview() {
   var net=g-t; var vol=net>0?(net/2400).toFixed(2):'—';
   var r=document.getElementById('wb-remarks').value||'None';
   var msg=[
-    '🏗 *'+PLANT+'*','*Weigh Bridge Slip — '+currentSlip+'*',
+    '🏗 *'+PLANT+'*','*Sales Slip — '+currentSlip+'*',
     '━━━━━━━━━━━━━━━━━━━','🕐 '+dt,'━━━━━━━━━━━━━━━━━━━',
     '🚛 Vehicle  : '+v,'👤 Customer : '+c,'🔧 Mix      : '+m,
     '━━━━━━━━━━━━━━━━━━━',
@@ -492,7 +492,7 @@ function wbPreview() {
     '⚖  Net      : '+(net>0?Number(net).toLocaleString('en-IN')+' kg':'—'),
     '📦 Volume   : '+(vol!=='—'?vol+' m³':'—'),
     '━━━━━━━━━━━━━━━━━━━','📝 Remarks  : '+r,
-    '━━━━━━━━━━━━━━━━━━━','_Deepika Construction — Weigh Bridge_'
+    '━━━━━━━━━━━━━━━━━━━','_Deepika Construction — Sales_'
   ].join('\n');
   document.getElementById('wb-preview').textContent=msg;
   return msg;
@@ -551,7 +551,7 @@ function inPreview() {
   var net=g-t;
   var r=document.getElementById('in-remarks').value||'None';
   var msg=[
-    '📦 *'+PLANT+'*','*Inbound Purchase — '+currentPO+'*',
+    '📦 *'+PLANT+'*','*Purchase Entry — '+currentPO+'*',
     '━━━━━━━━━━━━━━━━━━━','🕐 '+dt,'━━━━━━━━━━━━━━━━━━━',
     '🏭 Supplier : '+s,'🚛 Vehicle  : '+v,'🧱 Material : '+m,
     '━━━━━━━━━━━━━━━━━━━',
@@ -559,7 +559,7 @@ function inPreview() {
     '⚖  Tare     : '+(t?Number(t).toLocaleString('en-IN')+' kg':'—'),
     '⚖  Net      : '+(net>0?Number(net).toLocaleString('en-IN')+' kg':'—'),
     '━━━━━━━━━━━━━━━━━━━','📝 Remarks  : '+r,
-    '━━━━━━━━━━━━━━━━━━━','_Deepika Construction — Inbound Purchase_'
+    '━━━━━━━━━━━━━━━━━━━','_Deepika Construction — Purchase Entry_'
   ].join('\n');
   document.getElementById('in-preview').textContent=msg;
   return msg;
